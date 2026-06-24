@@ -46,7 +46,6 @@ def execute_socratic_step(problem: str, grade_level: str, current_step: int, stu
     max_retries = 3
     for attempt in range(max_retries):
         try:
-            # Modern configuration syntax
             response = client.models.generate_content(
                 model='gemini-2.5-flash',
                 contents=user_content,
@@ -57,9 +56,15 @@ def execute_socratic_step(problem: str, grade_level: str, current_step: int, stu
             )
             return response.text
         except Exception as e:
-            if "429" in str(e) or "503" in str(e):
+            # Check for rate limit indicators in the error string
+            error_msg = str(e).upper()
+            if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
                 if attempt < max_retries - 1:
-                    print(f"API Rate Limited. Retrying... (Attempt {attempt + 1}/{max_retries})")
-                    time.sleep(10)
-                    continue
+                    # Calculate progressive wait time (15s, 30s)
+                    wait_time = (attempt + 1) * 15
+                    print(f"Rate limit reached. Pausing backend threads for {wait_time}s...")
+                    time.sleep(wait_time)
+                    continue  # Safely trigger next retry loop attempt
+            
+            # If all retries fail or it's a different error, raise it
             raise Exception(f"API Connection Failed. Error: {str(e)}")
