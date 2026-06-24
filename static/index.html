@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Socratic STEM Tutor</title>
+    <style>
+        :root {
+            --bg-color: #f3f4f6;
+            --panel-bg: #ffffff;
+            --text-main: #1f2937;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bot-bubble: #e5e7eb;
+            --user-bubble: #2563eb;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            width: 100%;
+            max-width: 500px;
+            height: 600px;
+            background: var(--panel-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .header {
+            background: var(--primary);
+            color: white;
+            padding: 16px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .auth-box, .chat-box {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .hidden { display: none !important; }
+        input, button {
+            padding: 12px;
+            margin-bottom: 12px;
+            border-radius: 6px;
+            border: 1px solid #d1d5db;
+            font-size: 1rem;
+        }
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { background: var(--primary-hover); }
+        .logout-btn {
+            background: transparent;
+            font-size: 0.85rem;
+            border: 1px solid white;
+            padding: 4px 8px;
+            margin: 0;
+        }
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding-right: 4px;
+        }
+        .bubble {
+            max-width: 80%;
+            padding: 10px 14px;
+            border-radius: 16px;
+            line-height: 1.4;
+            font-size: 0.95rem;
+            white-space: pre-wrap;
+        }
+        .bubble.bot {
+            background: var(--bot-bubble);
+            color: var(--text-main);
+            align-self: flex-start;
+            border-top-left-radius: 4px;
+        }
+        .bubble.user {
+            background: var(--user-bubble);
+            color: white;
+            align-self: flex-end;
+            border-top-right-radius: 4px;
+        }
+        .input-row {
+            display: flex;
+            gap: 8px;
+        }
+        .input-row input { flex: 1; margin: 0; }
+        .input-row button { margin: 0; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <span>🤖 Socratic STEM Tutor</span>
+        <button id="logoutBtn" class="logout-btn hidden" onclick="logout()">Logout</button>
+    </div>
+
+    <div id="authView" class="auth-box">
+        <h3>Sign In / Create Account</h3>
+        <input type="email" id="email" placeholder="Student Email" value="student@academy.com">
+        <input type="password" id="password" placeholder="Password" value="SuperSecurePassword123">
+        <button onclick="handleAuth('login')">Login</button>
+        <button onclick="handleAuth('register')" style="background:#10b981;">Create Account</button>
+        <p id="authError" style="color:red; font-size:0.9rem; text-align:center;"></p>
+    </div>
+
+    <div id="chatView" class="chat-box hidden">
+        <div class="messages" id="messageArea">
+            <div class="bubble bot">Welcome back, student! What math problem are we breaking down today?</div>
+        </div>
+        <div class="input-row">
+            <input type="text" id="studentInput" placeholder="Type your problem or math attempt..." onkeypress="if(event.key === 'Enter') sendInput()">
+            <button onclick="sendInput()">Send</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_URL = "http://127.0.0.1:8000";
+    let token = localStorage.getItem("tutor_token");
+    let currentSessionId = null;
+
+    // Check application login state on boot
+    if (token) showChat();
+
+    function showChat() {
+        document.getElementById("authView").classList.add("hidden");
+        document.getElementById("chatView").classList.remove("hidden");
+        document.getElementById("logoutBtn").classList.remove("hidden");
+    }
+
+    function logout() {
+        localStorage.removeItem("tutor_token");
+        location.reload();
+    }
+
+    async function handleAuth(action) {
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+        const errorEl = document.getElementById("authError");
+        errorEl.textContent = "";
+
+        try {
+            const res = await fetch(`${API_URL}/auth/${action}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password })
+            });
+            const data = await res.json();
+
+            if (!res.ok) throw new Error(data.detail || "Authentication execution failed.");
+
+            if (action === 'login') {
+                localStorage.setItem("tutor_token", data.access_token);
+                token = data.access_token;
+                showChat();
+            } else {
+                alert("Account created successfully! Click Login to begin.");
+            }
+        } catch (err) {
+            errorEl.textContent = err.message;
+        }
+    }
+
+    async function sendInput() {
+        const inputEl = document.getElementById("studentInput");
+        const text = inputEl.value.trim();
+        if (!text) return;
+
+        // Display user bubble instantly
+        appendBubble(text, "user");
+        inputEl.value = "";
+
+        // Build request packet matching our Pydantic schema
+        const isFirstMessage = (currentSessionId === null);
+        const payload = {
+            problem: isFirstMessage ? text : "Context Active", 
+            session_id: currentSessionId,
+            student_attempt: isFirstMessage ? null : text
+        };
+
+        try {
+            const res = await fetch(`${API_URL}/tutor/solve`, {
+                method: "POST",
+                headers: { 
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}` // Passes our secure JWT passport link
+                },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+
+            if (!res.ok) throw new Error(data.detail || "Server connection dropped.");
+
+            currentSessionId = data.session_id;
+            appendBubble(data.data.response, "bot");
+
+        } catch (err) {
+            appendBubble(`⚠️ Error: ${err.message}`, "bot");
+        }
+    }
+
+    function appendBubble(text, sender) {
+        const area = document.getElementById("messageArea");
+        const b = document.createElement("div");
+        b.className = `bubble ${sender}`;
+        b.textContent = text;
+        area.appendChild(b);
+        area.scrollTop = area.scrollHeight; // Auto-scroll to latest micro-step
+    }
+</script>
+</body>
+</html>
