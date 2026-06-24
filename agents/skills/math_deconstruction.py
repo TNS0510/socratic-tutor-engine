@@ -46,9 +46,9 @@ def execute_socratic_step(problem: str, grade_level: str, current_step: int, stu
     max_retries = 3
     for attempt in range(max_retries):
         try:
-            # Initialize the model using standard legacy SDK syntax
+            # Swapped 'gemini-1.5-flash' to 'gemini-pro' for legacy library compatibility
             model = genai.GenerativeModel(
-                model_name='gemini-1.5-flash',
+                model_name='gemini-pro',
                 system_instruction=SOCRATIC_SYSTEM_INSTRUCTION
             )
             
