@@ -27,14 +27,24 @@
         .container {
             width: 100%;
             max-width: 500px;
-            height: 600px;
+            /* CHANGED: Swapped hard fixed height for a fully dynamic mobile viewport restriction */
+            height: 100vh;
+            max-height: 100vh;
             background: var(--panel-bg);
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
+        
+        /* Media query helper to format desktop cards cleanly while preserving full mobile scrolling */
+        @media (min-width: 501px) {
+            .container {
+                height: 600px;
+                border-radius: 12px;
+                box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            }
+        }
+
         .header {
             background: var(--primary);
             color: white;
@@ -44,6 +54,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-shrink: 0; /* Prevents header compression on small screens */
         }
         .auth-box, .chat-box {
             display: flex;
@@ -51,6 +62,7 @@
             flex: 1;
             padding: 20px;
             box-sizing: border-box;
+            overflow: hidden; /* Contains children content strictly */
         }
         .hidden { display: none !important; }
         input, button {
@@ -83,6 +95,8 @@
             flex-direction: column;
             gap: 12px;
             padding-right: 4px;
+            /* CHANGED: Forces content anchors to correctly handle dynamic flow resizing */
+            min-height: 0; 
         }
         .bubble {
             max-width: 80%;
@@ -107,6 +121,8 @@
         .input-row {
             display: flex;
             gap: 8px;
+            flex-shrink: 0; /* Keeps typing area always pinned safely above screen boundary base */
+            padding-bottom: env(safe-area-inset-bottom, 0px); /* Respects bottom gestures markers */
         }
         .input-row input { flex: 1; margin: 0; }
         .input-row button { margin: 0; }
@@ -141,7 +157,6 @@
 </div>
 
 <script>
-    // Automatically sets domain correctly on both local machine and Render
     const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
         ? "http://127.0.0.1:8000" 
         : window.location.origin;
@@ -149,13 +164,14 @@
     let token = localStorage.getItem("tutor_token");
     let currentSessionId = null;
 
-    // Check application login state on boot
     if (token) showChat();
 
     function showChat() {
         document.getElementById("authView").classList.add("hidden");
         document.getElementById("chatView").classList.remove("hidden");
         document.getElementById("logoutBtn").classList.remove("hidden");
+        // Scroll to the bottom immediately upon opening the chat
+        setTimeout(scrollToBottom, 50);
     }
 
     function logout() {
@@ -196,11 +212,9 @@
         const text = inputEl.value.trim();
         if (!text) return;
 
-        // Display user bubble instantly
         appendBubble(text, "user");
         inputEl.value = "";
 
-        // Build request packet matching our Pydantic schema
         const isFirstMessage = (currentSessionId === null);
         const payload = {
             problem: isFirstMessage ? text : "Context Active", 
@@ -235,7 +249,12 @@
         b.className = `bubble ${sender}`;
         b.textContent = text;
         area.appendChild(b);
-        area.scrollTop = area.scrollHeight; 
+        scrollToBottom();
+    }
+
+    function scrollToBottom() {
+        const area = document.getElementById("messageArea");
+        area.scrollTop = area.scrollHeight;
     }
 </script>
 </body>
