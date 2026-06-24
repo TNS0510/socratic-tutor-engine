@@ -1,7 +1,7 @@
 import os
 import time
-import google.generativeai as genai
-from google.generativeai import types
+from google import genai
+from google.genai import types
 from dotenv import load_dotenv
 
 # Import our brand new deterministic math sandbox tool!
@@ -23,8 +23,8 @@ Instead, look closely at the 'DETERMINISTIC SANDBOX VERIFICATION' fact provided 
 def execute_socratic_step(problem: str, grade_level: str, current_step: int, student_attempt: str = None) -> str:
     api_key = os.getenv("GEMINI_API_KEY")
     
-    # Correct configuration initialization for 'google-generativeai'
-    genai.configure(api_key=api_key)
+    # Correct client initialization for modern google-genai SDK
+    client = genai.Client(api_key=api_key)
     
     # Run our deterministic sandbox behind the scenes!
     sandbox_verification = verify_algebraic_step(problem, student_attempt)
@@ -46,16 +46,12 @@ def execute_socratic_step(problem: str, grade_level: str, current_step: int, stu
     max_retries = 3
     for attempt in range(max_retries):
         try:
-          # Set this back to gemini-1.5-flash
-            model = genai.GenerativeModel(
-                model_name='gemini-1.5-flash',
-                system_instruction=SOCRATIC_SYSTEM_INSTRUCTION
-            )
-            
-            # Execute generation with generation parameters
-            response = model.generate_content(
-                user_content,
-                generation_config=genai.types.GenerationConfig(
+            # Modern configuration syntax
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=user_content,
+                config=types.GenerateContentConfig(
+                    system_instruction=SOCRATIC_SYSTEM_INSTRUCTION,
                     temperature=0.3,
                 )
             )
