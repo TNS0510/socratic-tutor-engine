@@ -141,7 +141,11 @@
 </div>
 
 <script>
-    const API_URL = "http://127.0.0.1:8000";
+    // Automatically sets domain correctly on both local machine and Render
+    const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+        ? "http://127.0.0.1:8000" 
+        : window.location.origin;
+
     let token = localStorage.getItem("tutor_token");
     let currentSessionId = null;
 
@@ -209,7 +213,7 @@
                 method: "POST",
                 headers: { 
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}` // Passes our secure JWT passport link
+                    "Authorization": `Bearer ${token}` 
                 },
                 body: JSON.stringify(payload)
             });
@@ -231,7 +235,7 @@
         b.className = `bubble ${sender}`;
         b.textContent = text;
         area.appendChild(b);
-        area.scrollTop = area.scrollHeight; // Auto-scroll to latest micro-step
+        area.scrollTop = area.scrollHeight; 
     }
 </script>
 </body>
