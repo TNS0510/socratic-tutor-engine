@@ -1,7 +1,7 @@
 import os
 import time
 import google.generativeai as genai
-from google.genai import types
+from google.generativeai import types
 from dotenv import load_dotenv
 
 # Import our brand new deterministic math sandbox tool!
